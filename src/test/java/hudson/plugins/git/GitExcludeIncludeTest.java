@@ -33,7 +33,7 @@ public class GitExcludeIncludeTest extends AbstractGitTestCase {
 
 
     public void testBasicIncludedRegion() throws Exception {
-        FreeStyleProject project = setupProject("master", false, null, null, null, null, ".*3");
+        FreeStyleProject project = setupProject("master", false, null, null, null, null, ".*3", false);
 
         // create initial commit and then run the build against it:
         final String commitFile1 = "commitFile1";

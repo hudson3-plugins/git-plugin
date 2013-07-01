@@ -165,4 +165,6 @@ public interface IGitAPI {
     String getAllLogEntries(String branch);
 
     List<String> showRevision(Revision r) throws GitException;
+    
+    String getHeadRev(String remoteRepoUrl, String branch) throws GitException;
 }

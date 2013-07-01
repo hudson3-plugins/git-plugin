@@ -28,6 +28,7 @@ import hudson.model.FreeStyleProject;
 import hudson.model.Node;
 import hudson.model.Result;
 import hudson.model.User;
+import hudson.scm.PollingResult;
 import hudson.slaves.EnvironmentVariablesNodeProperty.Entry;
 import java.util.Set;
 
@@ -337,4 +338,27 @@ public class GitSCMTest extends AbstractGitTestCase {
         assertFalse("scm polling should not detect any more changes after last build",
             project.pollSCMChanges(listener));
     }
+    
+    public void testBasicRemotePoll() throws Exception {
+        FreeStyleProject project = setupProject("master", false, null, null, null, true);
+        // create initial commit and then run the build against it:
+        final String commitFile1 = "commitFile1";
+        commit(commitFile1, johnDoe, "Commit number 1");
+        build(project, Result.SUCCESS, commitFile1);
+        
+        assertFalse("scm polling should not detect any more changes after build", project.pollSCMChanges(listener));
+        
+        final String commitFile2 = "commitFile2";
+        commit(commitFile2, janeDoe, "Commit number 2");
+        assertTrue("scm polling did not detect commit2 change", project.pollSCMChanges(listener));
+        // ... and build it...
+        final FreeStyleBuild build2 = build(project, Result.SUCCESS, commitFile2);
+        final Set<User> culprits = build2.getCulprits();
+        assertEquals("The build should have only one culprit", 1, culprits.size());
+        assertEquals("", janeDoe.getName(), culprits.iterator().next().getFullName());
+        assertTrue(build2.getWorkspace().child(commitFile2).exists());
+        assertBuildStatusSuccess(build2);
+        assertFalse("scm polling should not detect any more changes after build", project.pollSCMChanges(listener));
+    }
+
 }

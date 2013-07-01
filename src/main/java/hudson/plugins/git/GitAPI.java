@@ -137,6 +137,9 @@ public class GitAPI implements IGitAPI {
     }
 
     public boolean hasGitRepo(String gitDir) throws GitException {
+        if (workspace == null) {
+            return false;
+        }
         try {
             FilePath dotGit = workspace.child(gitDir);
             return dotGit.exists();
@@ -1084,5 +1087,16 @@ public class GitAPI implements IGitAPI {
             }
         }
         return result;
+    }
+    
+    public String getHeadRev(String remoteRepoUrl, String branch) throws GitException {
+        String[] branchExploded = branch.split("/");
+        branch = branchExploded[branchExploded.length-1];
+        ArgumentListBuilder args = new ArgumentListBuilder("ls-remote");
+        args.add("-h");
+        args.add(remoteRepoUrl);
+        args.add(branch);
+        String result = launchCommand(args);
+        return result.length()>=40 ? result.substring(0,40) : "";
     }
 }

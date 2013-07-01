@@ -114,6 +114,9 @@
     <f:entry title="Clean after checkout" help="/plugin/git/clean.html">
       <f:checkbox name="git.clean" checked="${scm.clean}" />
     </f:entry>
+    <f:entry title="Fast remote polling" help="/plugin/git/help-fastremote.html">
+      <f:checkbox name="git.remotePoll" checked="${scm.remotePoll}" />
+    </f:entry>
     <f:entry title="Recursively update submodules" help="/plugin/git/help-recursiveSubmodules.html">
       <f:checkbox name="git.recursiveSubmodules" checked="${scm.recursiveSubmodules}" />
     </f:entry>
