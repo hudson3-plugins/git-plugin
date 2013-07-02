@@ -387,7 +387,7 @@ public class GitSCM extends SCM implements Serializable {
                         gitUrisToAdd.add(gitUri.setRawPath(gitUri.getPath())); 
                         needMigration = true;
                     } catch (URISyntaxException ex) {
-                        LOGGER.log(Level.WARNING, "Failed to set RawParh", ex);
+                        LOGGER.log(Level.WARNING, "Failed to set RawPath", ex);
                     }
                 } else {
                     gitUrisToAdd.add(gitUri);
