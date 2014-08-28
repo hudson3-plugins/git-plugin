@@ -32,7 +32,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import org.apache.commons.io.FileUtils;
-import org.eclipse.jgit.lib.ObjectId;
 import org.junit.Before;
 import org.junit.Test;
 

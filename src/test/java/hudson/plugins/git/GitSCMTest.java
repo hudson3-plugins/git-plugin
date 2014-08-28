@@ -28,7 +28,6 @@ import hudson.model.FreeStyleProject;
 import hudson.model.Node;
 import hudson.model.Result;
 import hudson.model.User;
-import hudson.scm.PollingResult;
 import hudson.slaves.EnvironmentVariablesNodeProperty.Entry;
 import java.util.Set;
 

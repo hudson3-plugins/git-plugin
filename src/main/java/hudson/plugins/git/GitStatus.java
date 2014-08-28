@@ -8,15 +8,9 @@ import hudson.Util;
 import hudson.model.AbstractModelObject;
 import hudson.model.AbstractProject;
 import hudson.model.Hudson;
-import hudson.model.RootAction;
+import hudson.model.UnsecuredRootAction;
 import hudson.scm.SCM;
 import hudson.triggers.SCMTrigger;
-import org.apache.commons.lang.StringUtils;
-import org.eclipse.jgit.transport.RemoteConfig;
-import org.eclipse.jgit.transport.URIish;
-import org.kohsuke.stapler.*;
-
-import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URISyntaxException;
@@ -25,16 +19,21 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
-
+import javax.servlet.ServletException;
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.hudson.security.HudsonSecurityManager;
+import org.eclipse.jgit.transport.RemoteConfig;
+import org.eclipse.jgit.transport.URIish;
+import org.kohsuke.stapler.*;
+
 
 /**
  * Information screen for the use of Git in Hudson.
  */
 @Extension
-public class GitStatus extends AbstractModelObject implements RootAction{
+public class GitStatus extends AbstractModelObject implements UnsecuredRootAction{
 
     public String getDisplayName() {
         return "Git";
@@ -192,8 +191,8 @@ public class GitStatus extends AbstractModelObject implements RootAction{
      * @since 1.4.1
      */
     @Extension
-    @SuppressWarnings("unused") // Jenkins extension
-    public static class JenkinsAbstractProjectListener extends Listener {
+    @SuppressWarnings("unused") 
+    public static class HudsonAbstractProjectListener extends Listener {
 
         /**
          * {@inheritDoc}
