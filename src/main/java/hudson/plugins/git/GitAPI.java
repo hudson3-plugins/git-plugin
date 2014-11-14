@@ -88,7 +88,7 @@ public class GitAPI implements IGitAPI {
         if (hasGitRepo()) {//Wrap file repository if exists in order to perform operations and initialize jGitDelegate
             try {
                 File gitDir = RepositoryCache.FileKey.resolve(new File(workspace.getRemote()), FS.DETECTED);
-                jGitDelegate = Git.wrap(new FileRepositoryBuilder().setGitDir(gitDir).build());
+                setDelegate(Git.wrap(new FileRepositoryBuilder().setGitDir(gitDir).build()));
             } catch (IOException e) {
                 e.printStackTrace(listener.getLogger());
             }
@@ -105,6 +105,11 @@ public class GitAPI implements IGitAPI {
             jGitDelegate = null;
         }
 	}
+    
+    private void setDelegate(Git delegate) {
+        close();
+        jGitDelegate = delegate;
+    }
 
     /**
      * Returns author
@@ -137,7 +142,7 @@ public class GitAPI implements IGitAPI {
             throw new GitException(Messages.GitAPI_Repository_FailedInitTwiceMsg());
         }
         try {
-            jGitDelegate = Git.init().setDirectory(new File(workspace.getRemote())).call();
+            setDelegate(Git.init().setDirectory(new File(workspace.getRemote())).call());
         } catch (GitAPIException ex) {
             throw new GitException(ex);
         }
@@ -239,11 +244,11 @@ public class GitAPI implements IGitAPI {
                 public String invoke(File workspace,
                                      VirtualChannel channel) throws IOException {
                     try {
-                        jGitDelegate = Git.cloneRepository()
+                        setDelegate(Git.cloneRepository()
                             .setDirectory(workspace.getAbsoluteFile())
                             .setURI(source.toPrivateString())
                             .setRemote(remoteConfig.getName())
-                            .call();
+                            .call());
                     } catch (Exception ex) {
                         throw new GitException(ex);
                     } 
