@@ -1924,7 +1924,7 @@ public class GitSCM extends SCM implements Serializable {
             }
 
             // Has this revision been specifically excluded?
-            if (excludedCommits.contains(r.getSha1String())) {
+            if (excludedCommits != null && excludedCommits.contains(r.getSha1String())) {
                 listener.getLogger().println("Ignored commit " + r.getSha1String() + ": This commit has been explicitly excluded from triggering builds.");
                 return true;
             }
