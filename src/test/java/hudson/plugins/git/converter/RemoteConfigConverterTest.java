@@ -27,6 +27,7 @@ import com.thoughtworks.xstream.XStream;
 import hudson.XmlFile;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
+import hudson.model.Job;
 import hudson.util.XStream2;
 import java.io.File;
 import java.io.IOException;
@@ -73,7 +74,8 @@ public class RemoteConfigConverterTest {
         XSTREAM.alias("RemoteConfig", org.spearce.jgit.transport.RemoteConfig.class);
         XSTREAM.registerConverter(new RemoteConfigConverter(XSTREAM.getMapper(), XSTREAM.getReflectionProvider()));
         //read object from config
-        Object item = getSourceConfigFile(XSTREAM).read();
+        Job item = (Job) getSourceConfigFile(XSTREAM).read();
+        item.initProjectProperties();
         //save to new config file
         getTargetConfigFile(XSTREAM).write(item);
         getTargetConfigFile(XSTREAM).read();
