@@ -30,6 +30,7 @@ import hudson.FilePath;
 import hudson.FilePath.FileCallable;
 import hudson.Launcher;
 import hudson.Util;
+import static hudson.Util.fixEmptyAndTrim;
 import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixRun;
 import hudson.model.AbstractBuild;
@@ -44,6 +45,7 @@ import hudson.model.ParametersAction;
 import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.model.TopLevelItem;
 import hudson.plugins.git.browser.GitRepositoryBrowser;
 import hudson.plugins.git.converter.ObjectIdConverter;
 import hudson.plugins.git.converter.RemoteConfigConverter;
@@ -67,6 +69,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -90,14 +93,11 @@ import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.transport.RefSpec;
 import org.eclipse.jgit.transport.RemoteConfig;
+import org.eclipse.jgit.transport.URIish;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
-
-import static hudson.Util.fixEmptyAndTrim;
-import java.net.URISyntaxException;
-import org.eclipse.jgit.transport.URIish;
 
 /**
  * Git SCM.
@@ -539,6 +539,10 @@ public class GitSCM extends SCM implements Serializable {
         }
         return fixEmptyAndTrim(confName);
     }
+	
+	public boolean isPollSlaves() {
+		return ((DescriptorImpl) getDescriptor()).isPollSlaves();
+	}
 
     public String getGitConfigEmailToUse() {
         String confEmail;
@@ -1149,6 +1153,7 @@ public class GitSCM extends SCM implements Serializable {
         private String globalConfigName;
         private String globalConfigEmail;
         private boolean createAccountBaseOnCommitterEmail;
+		private boolean pollSlaves = true;
 
         public DescriptorImpl() {
             super(GitSCM.class, GitRepositoryBrowser.class);
@@ -1163,6 +1168,10 @@ public class GitSCM extends SCM implements Serializable {
         public void setGlobalConfigEmail(String globalConfigEmail) {
             this.globalConfigEmail = globalConfigEmail;
         }
+		
+		public void setPollSlaves(boolean pollSlaves) {
+			this.pollSlaves = pollSlaves;
+		}
 
         public void setCreateAccountBaseOnCommitterEmail(boolean createAccountBaseOnCommitterEmail) {
             this.createAccountBaseOnCommitterEmail = createAccountBaseOnCommitterEmail;
@@ -1225,7 +1234,15 @@ public class GitSCM extends SCM implements Serializable {
         public String getGlobalConfigEmail() {
             return globalConfigEmail;
         }
-
+		
+		/**
+		 * Global setting that determines whether slave (vs. master) workspace
+		 * is used in polling
+		 */
+		public boolean isPollSlaves() {
+			return pollSlaves;
+		}
+		
         /**
          * Returns true if Hudson should create new accounts base on Git commiter's email instead of full name.
          *
@@ -1566,7 +1583,7 @@ public class GitSCM extends SCM implements Serializable {
                     break;
                 }
             }
-            final EnvVars environment = GitUtils.getPollEnvironment(project, workspace, launcher, listener);
+            final EnvVars environment = GitUtils.getPollEnvironment(project, workspace, launcher, listener, isPollSlaves());
             IGitAPI git = new GitAPI(gitExe, workspace, listener, environment);
             
             try {
@@ -1591,9 +1608,16 @@ public class GitSCM extends SCM implements Serializable {
                 git.close();
             }
         }
-        
+		
         final String gitExe;
-        {
+		
+		if (!isPollSlaves()) {
+			launcher = new Launcher.LocalLauncher(null);
+			Hudson hudson = Hudson.getInstance();
+			TopLevelItem item = hudson.getItem(project.getName());
+			workspace = hudson.getWorkspaceFor(item);
+			gitExe = getGitExe(Hudson.getInstance(), listener);
+		} else {
             //If this project is tied onto a node, it's built always there. On other cases,
             //polling is done on the node which did the last build.
             //
@@ -1615,11 +1639,12 @@ public class GitSCM extends SCM implements Serializable {
         // I'm actually not 100% sure about this, but I'll leave it in for now.
         // Update 9/9/2010 - actually, I think this *was* needed, since we weren't doing a better check
         // for whether we'd ever been built before. But I'm fixing that right now anyway.
-        if (!workingDirectory.exists()) {
+		// Update 2/23/2015 If not polling slaves, need to create the workspace on first poll.
+        if (!workingDirectory.exists() && isPollSlaves()) {
             return PollingResult.BUILD_NOW;
         }
 
-        final EnvVars environment = GitUtils.getPollEnvironment(project, workspace, launcher, listener);
+        final EnvVars environment = GitUtils.getPollEnvironment(project, workspace, launcher, listener, isPollSlaves());
         final List<RemoteConfig> paramRepos = getParamExpandedRepos(lastBuild);
         //final String singleBranch = GitUtils.getSingleBranch(lastBuild, getRepositories(), getBranches());
 
@@ -1630,7 +1655,7 @@ public class GitSCM extends SCM implements Serializable {
 
                 Map<String, List<RemoteConfig>> repoMap = getRemoteConfigMap(paramRepos);
 
-                List<Revision> canditates = new ArrayList<Revision>();
+                List<Revision> candidates = new ArrayList<Revision>();
                 for (Map.Entry<String, List<RemoteConfig>> entry : repoMap.entrySet()) {
                     FilePath workspace = new FilePath(localWorkspace);
                     if (StringUtils.isNotEmpty(entry.getKey()) && !entry.getKey().equals(".")) {
@@ -1639,31 +1664,38 @@ public class GitSCM extends SCM implements Serializable {
                     IGitAPI git = new GitAPI(gitExe, workspace, listener, environment);
                     
                     try {
-                    if (git.hasGitRepo()) {
-                        // Repo is there - do a fetch
-                        listener.getLogger().println("Fetching changes from the remote Git repositories");
+						if (!git.hasGitRepo()) {
+							if (!isPollSlaves()) {
+								// Need to have an initial repo
+								for (RemoteConfig remoteRepository : paramRepos) {
+									git.clone(remoteRepository);
+								}
+							} else {
+								listener.getLogger().println("No Git repository yet, an initial checkout is required");
+								return true;
+							}
+						} else {
+							// Repo is there - do a fetch
+							listener.getLogger().println("Fetching changes from the remote Git repositories");
 
-                        for (RemoteConfig remoteRepository : entry.getValue()) {
-                            fetchFrom(git, listener, remoteRepository);
-                        }
+							for (RemoteConfig remoteRepository : entry.getValue()) {
+								fetchFrom(git, listener, remoteRepository);
+							}
 
-                        Collection<Revision> origCanditates = buildChooser.getCandidateRevisions(true, singleBranch, git, listener, buildData);
+							Collection<Revision> origCanditates = buildChooser.getCandidateRevisions(true, singleBranch, git, listener, buildData);
 
-                        for (Revision c : origCanditates) {
-                            if (!isRevExcluded(git, c, listener)) {
-                                canditates.add(c);
-                            }
-                        }
+							for (Revision c : origCanditates) {
+								if (!isRevExcluded(git, c, listener)) {
+									candidates.add(c);
+								}
+							}
 
-                    } else {
-                        listener.getLogger().println("No Git repository yet, an initial checkout is required");
-                        return true;
-                    }
+						}
                     } finally {
                         git.close();
                     }
                 }
-                return (canditates.size() > 0);
+                return (candidates.size() > 0);
             }
         });
 

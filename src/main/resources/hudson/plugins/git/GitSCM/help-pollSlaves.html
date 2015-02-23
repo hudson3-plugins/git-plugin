@@ -1,0 +1,10 @@
+<div>
+  <p>If checked, poll using the state of the repository in the workspace on the last build slave (default).
+  Otherwise, poll using the state of the last built repository kept on master. This is
+  the preferred option if slaves are dynamically added and removed, e.g., from a slave pool.</p>
+  <p>Note that if the per-job "remote polling" option is enabled, polling is based on
+  a single status value kept on master. This speeds up polling in simple cases. However,
+  it does not work if a job uses more than one branch or repository, or excluded regions
+  or users. Moreover, a slave may still be contacted to obtain environment variables.
+  Only disabling Poll slaves ensures that slaves are not used by polling for any reason.</p>
+</div>

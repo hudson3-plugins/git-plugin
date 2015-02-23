@@ -145,11 +145,11 @@ public class GitUtils {
      * An attempt to generate at least semi-useful EnvVars for polling calls, based on previous build.
      * Cribbed from various places.
      */
-    public static EnvVars getPollEnvironment(AbstractProject p, FilePath ws, Launcher launcher, TaskListener listener)
+    public static EnvVars getPollEnvironment(AbstractProject p, FilePath ws, Launcher launcher, TaskListener listener, boolean pollSlaves)
         throws IOException, InterruptedException {
         EnvVars env;
 
-        AbstractBuild b = (AbstractBuild) p.getLastBuild();
+        AbstractBuild b = pollSlaves ? (AbstractBuild) p.getLastBuild() : null;
 
         if (b != null) {
             Node lastBuiltOn = b.getBuiltOn();

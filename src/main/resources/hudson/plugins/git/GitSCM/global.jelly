@@ -7,8 +7,11 @@
     <f:entry title="Global Config user.email Value" field="globalConfigEmail">
       <f:textbox />
     </f:entry>
-    <f:entry title="Create new accounts base on committer's email" field="createAccountBaseOnCommitterEmail">
+    <f:entry title="Create new accounts based on committer's email" field="createAccountBaseOnCommitterEmail">
        <f:checkbox name="createAccountBaseOnCommitterEmail" checked="${descriptor.createAccountBaseOnCommitterEmail}"/>
+    </f:entry>
+    <f:entry title="Poll slaves" field="pollSlaves">
+       <f:checkbox name="pollSlaves" checked="${descriptor.pollSlaves}"/>
     </f:entry>
   </f:section>
 </j:jelly>
