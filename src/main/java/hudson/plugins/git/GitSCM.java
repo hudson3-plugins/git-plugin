@@ -614,7 +614,7 @@ public class GitSCM extends SCM implements Serializable {
     }
     
     public boolean requiresWorkspaceForPolling() {
-        return !remotePoll;
+        return !remotePoll && isPollSlaves();
     }
 
     public RemoteConfig getRepositoryByName(String repoName) {
@@ -1546,6 +1546,19 @@ public class GitSCM extends SCM implements Serializable {
         }
         return workspace.child(relativeTargetDir);
     }
+    
+    private FilePath getLocalWorkspace(AbstractProject<?, ?> project, TaskListener listener) {
+        // Can't call hudson.getItem(name) because polling runs without READ permission
+        TopLevelItem item = null;
+        try {
+            item = (TopLevelItem) project;
+        } catch (ClassCastException e) {
+            String msg = "Cannot poll for job type "+project.getClass().getName();
+            listener.error(msg);
+            LOGGER.severe(msg);
+        }
+        return item == null ? null : Hudson.getInstance().getWorkspaceFor(item);
+    }
 
     @Override
     protected PollingResult compareRemoteRevisionWith(AbstractProject<?, ?> project, Launcher launcher,
@@ -1611,13 +1624,14 @@ public class GitSCM extends SCM implements Serializable {
 		
         final String gitExe;
 		
-		if (!isPollSlaves()) {
-			launcher = new Launcher.LocalLauncher(null);
-			Hudson hudson = Hudson.getInstance();
-			TopLevelItem item = hudson.getItem(project.getName());
-			workspace = hudson.getWorkspaceFor(item);
-			gitExe = getGitExe(Hudson.getInstance(), listener);
-		} else {
+        if (!isPollSlaves()) {
+            launcher = new Launcher.LocalLauncher(null);
+            workspace = getLocalWorkspace(project, listener);
+            if (workspace == null) {
+                return PollingResult.NO_CHANGES;
+            }
+            gitExe = getGitExe(Hudson.getInstance(), listener);
+        } else {
             //If this project is tied onto a node, it's built always there. On other cases,
             //polling is done on the node which did the last build.
             //
