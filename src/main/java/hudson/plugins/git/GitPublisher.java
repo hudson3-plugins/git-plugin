@@ -171,6 +171,7 @@ public class GitPublisher extends Recorder implements Serializable, MatrixAggreg
             return true;
         } else {
             final String gitExe = gitSCM.getGitExe(build.getBuiltOn(), listener);
+            listener.getLogger().println("Git Exe: " + gitExe);
             EnvVars tempEnvironment;
             try {
                 tempEnvironment = build.getEnvironment(listener);

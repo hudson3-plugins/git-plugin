@@ -710,6 +710,9 @@ public class GitSCM extends SCM implements Serializable {
         //TODO find way to delete global variables and don't break master-slave serialization
         final int buildNumber = build.getNumber();
         final String gitExe = getGitExe(build.getBuiltOn(), listener);
+        
+        listener.getLogger().println("Git Exe: " + gitExe);
+        
         final String internalTagName = new StringBuilder()
             .append(GitConstants.INTERNAL_TAG_NAME_PREFIX)
             .append(GitConstants.HYPHEN_SYMBOL)
@@ -1646,6 +1649,8 @@ public class GitSCM extends SCM implements Serializable {
                 gitExe = getGitExe(project.getLastBuiltOn(), listener);
             }
         }
+        
+        listener.getLogger().println("Git Exe: " + gitExe);
 
         FilePath workingDirectory = workingDirectory(workspace);
 
