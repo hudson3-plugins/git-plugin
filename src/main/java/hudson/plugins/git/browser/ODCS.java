@@ -12,6 +12,7 @@ import org.kohsuke.stapler.StaplerRequest;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 
 /**
@@ -20,49 +21,39 @@ import java.net.URL;
 public class ODCS extends GitRepositoryBrowser {
 
     private static final long serialVersionUID = 1L;
-    private final URL orgUrl;
-    private final String projectName;
-    private final String repoName;
+    private final URL url;
 
     @DataBoundConstructor
-    public ODCS(String orgUrl, String projectName, String repoName) throws MalformedURLException {
-        if (orgUrl != null && !orgUrl.endsWith("/")) {
-            orgUrl = orgUrl + "/";
+    public ODCS(String url) throws MalformedURLException {
+        if (url != null && !url.endsWith("/")) {
+            url = url + "/";
         }
-        this.orgUrl = new URL(orgUrl);
-		this.projectName = projectName;
-		this.repoName = repoName;
+        this.url = new URL(url);
     }
 
-    public URL getOrgUrl() {
-        return orgUrl;
-    }
-
-    public String getProjectName() {
-        return projectName;
-    }
-    
-    public String getRepoName() {
-        return repoName;
+    public URL getUrl() {
+        return url;
     }
 
     /**
      * Creates a link to the changeset
      *
-     * https://[GitLab URL]/commit/a9182a07750c9a0dfd89a8461adf72ef5ef0885b
+     * https://[ODCS URL]/commit/a9182a07750c9a0dfd89a8461adf72ef5ef0885b
      *
      * @return diff link
      * @throws IOException
      */
     @Override
     public URL getChangeSetLink(GitChangeSet changeSet) throws IOException {
-        return new URL(getOrgUrl(), "#projects/" + getProjectName() + "/scm/" + getRepoName() + ".git/commit/" + changeSet.getId().toString());
+        String changeSetURLString = String.format("%s/commit/%s",
+                urlAsStringWithoutSlash(), changeSet.getId().toString());
+        return new URL(changeSetURLString);
     }
 
     /**
      * Creates a link to the commit diff.
      * 
-     * https://[ODCS URL]/commit/a9182a07750c9a0dfd89a8461adf72ef5ef0885b
+     * https://[ODCS URL]/commit/a9182a07750c9a0dfd89a8461adf72ef5ef0885b?oi=foo.java
      * 
      * @param path
      * @return diff link
@@ -71,13 +62,15 @@ public class ODCS extends GitRepositoryBrowser {
     @Override
     public URL getDiffLink(Path path) throws IOException {
         final GitChangeSet changeSet = path.getChangeSet();
-        return new URL(getOrgUrl(), "#projects/" + getProjectName() + "/scm/" + getRepoName() + ".git/commit/" + changeSet.getId().toString() + "?oi=" + path.getPath());
+        String changeSetURLString = String.format("%s/commit/%s?oi=%s",
+                urlAsStringWithoutSlash(), changeSet.getId().toString(), 
+                path.getPath());
+        return new URL(changeSetURLString);
     }
 
     /**
      * Creates a link to the file.
-     * https://[GitLab URL]/a9182a07750c9a0dfd89a8461adf72ef5ef0885b/tree/pom.xml
-     * https://[ODCS URL]/blob/tree/pom.xml
+     * https://[ODCS URL]/blob/pom.xml?revision=a9182a07750c9a0dfd89a8461adf72ef5ef0885b
      * 
      * @param path
      * @return file link
@@ -88,7 +81,10 @@ public class ODCS extends GitRepositoryBrowser {
         if (path.getEditType().equals(EditType.DELETE)) {
             return getDiffLink(path);
         } else {
-            return new URL(getOrgUrl(), "#projects/" + getProjectName() + "/scm/" + getRepoName() + ".git/blob/" + path.getPath() + "?revision=" + path.getChangeSet().getId()); 
+            String changeSetURLString = String.format("%s/blob/%s?revision=%s",
+                    urlAsStringWithoutSlash(), path.getPath(), 
+                    path.getChangeSet().getId());
+            return new URL(changeSetURLString);
         }
     }
 
@@ -102,6 +98,14 @@ public class ODCS extends GitRepositoryBrowser {
         public ODCS newInstance(StaplerRequest req, JSONObject jsonObject) throws FormException {
             return req.bindJSON(ODCS.class, jsonObject);
         }
+    }
+
+    private String urlAsStringWithoutSlash() {
+        String urlString = url.toString();
+        while (urlString.endsWith("/")) {
+            urlString = urlString.substring(0, urlString.length() - 1);
+        }
+        return urlString;
     }
 
 }
