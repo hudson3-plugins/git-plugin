@@ -62,6 +62,7 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.RepositoryCache;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.transport.RefSpec;
 import org.eclipse.jgit.transport.RemoteConfig;
 import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.util.FS;
@@ -224,6 +225,51 @@ public class GitAPI implements IGitAPI {
      * @param remoteConfig remote config
      * @throws GitException if deleting or cloning the workspace fails
      */
+    public void clone_cgit(final RemoteConfig remoteConfig) throws GitException {
+        listener.getLogger().println(Messages.GitAPI_Repository_CloningRepositoryMsg(remoteConfig.getName()));
+        try {
+            workspace.deleteRecursive();
+        } catch (Exception ex) {
+            ex.printStackTrace(listener.error(Messages.GitAPI_Workspace_FailedCleanupMsg()));
+            throw new GitException(Messages.GitAPI_Workspace_FailedDeleteMsg(), ex);
+        }
+
+        // Assume only 1 URL for this repository
+        final URIish source = remoteConfig.getURIs().get(0);
+
+        try {
+            workspace.act(new FilePath.FileCallable<String>() {
+
+                private static final long serialVersionUID = 1L;
+
+                public String invoke(File workspace,
+                        VirtualChannel channel) throws IOException {
+                    workspace.mkdirs();
+                    String url = remoteConfig.getURIs().get(0).toPrivateString();
+                    String origin = remoteConfig.getName();
+
+                    ArgumentListBuilder args = new ArgumentListBuilder();
+                    args.add("init", workspace.getAbsolutePath());
+
+                    try {
+                        launchCommand(args);
+                    } catch (GitException e) {
+                        throw new GitException("Could not init " + workspace, e);
+                    }
+
+                    RefSpec refSpec = new RefSpec("+refs/heads/*:refs/remotes/" + origin + "/*");
+
+                    fetch(url, refSpec.toString());
+
+                    return Messages.GitAPI_Repository_CloneSuccessMsg(source.toPrivateString(),
+                            workspace.getAbsolutePath());
+                }
+            });
+        } catch (Exception e) {
+            throw new GitException(Messages.GitAPI_Repository_FailedCloneMsg(source), e);
+        }
+    }
+    
     public void clone(final RemoteConfig remoteConfig) throws GitException {
         listener.getLogger().println(Messages.GitAPI_Repository_CloningRepositoryMsg(remoteConfig.getName()));
         try {

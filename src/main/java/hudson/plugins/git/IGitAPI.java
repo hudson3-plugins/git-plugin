@@ -94,6 +94,8 @@ public interface IGitAPI {
     void push(RemoteConfig repository, String revspec) throws GitException;
 
     void merge(String revSpec) throws GitException;
+    
+    void clone_cgit(RemoteConfig source) throws GitException;
 
     void clone(RemoteConfig source) throws GitException;
 

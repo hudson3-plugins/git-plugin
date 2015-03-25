@@ -191,6 +191,8 @@ public class GitSCM extends SCM implements Serializable {
     private String gitConfigEmail;
 
     private boolean skipTag;
+    
+    private boolean useCgitClone;
 
     public Collection<SubmoduleConfig> getSubmoduleCfg() {
         return submoduleCfg;
@@ -381,6 +383,13 @@ public class GitSCM extends SCM implements Serializable {
         this.excludedCommits = new HashSet<String>();
     }
 
+    public void setUseCgitClone(boolean useCgitClone) {
+        this.useCgitClone = useCgitClone;
+    }
+    
+    public boolean getUseCgitClone() {
+        return useCgitClone;
+    }
 
     public Object readResolve() {
         // Migrate data
@@ -1067,7 +1076,11 @@ public class GitSCM extends SCM implements Serializable {
                         boolean successfullyCloned = false;
                         for (RemoteConfig rc : paramRepos) {
                             try {
-                                git.clone(rc);
+                                if (useCgitClone) {
+                                    git.clone_cgit(rc);
+                                } else {
+                                    git.clone(rc);
+                                }
                                 successfullyCloned = true;
                                 break;
                             } catch (GitException ex) {
@@ -1300,7 +1313,7 @@ public class GitSCM extends SCM implements Serializable {
             final GitRepositoryBrowser gitBrowser = getBrowserFromRequest(req, formData);
             String gitTool = req.getParameter("git.gitTool");
 
-            return new GitSCM(
+            GitSCM gitSCM = new GitSCM(
                 remoteRepositories,
                 branches,
                 mergeOptions,
@@ -1322,7 +1335,12 @@ public class GitSCM extends SCM implements Serializable {
                 req.getParameter("git.gitConfigEmail"),
                 req.getParameter("git.skipTag") != null,
                 req.getParameter("git.includedRegions"),
-                req.getParameter("git.ignoreNotifyCommit") != null);
+                req.getParameter("git.ignoreNotifyCommit") != null
+            );
+            
+            gitSCM.setUseCgitClone(req.getParameter("git.useCgitClone") != null);
+                    
+            return gitSCM;
         }
 
         @Deprecated
@@ -1687,7 +1705,12 @@ public class GitSCM extends SCM implements Serializable {
 							if (!isPollSlaves()) {
 								// Need to have an initial repo
 								for (RemoteConfig remoteRepository : paramRepos) {
-									git.clone(remoteRepository);
+                                                                    if (useCgitClone) {
+                                                                        git.clone_cgit(remoteRepository);
+                                                                    } else {
+                                                                        git.clone(remoteRepository);
+
+                                                                    }
 								}
 							} else {
 								listener.getLogger().println("No Git repository yet, an initial checkout is required");

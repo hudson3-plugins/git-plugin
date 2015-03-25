@@ -159,6 +159,11 @@
               </j:forEach>
           </select>
       </f:entry>
+      
+      <f:entry title="Use Command line git to clone" help="/plugin/git/useCgitClone.html">
+          <f:checkbox name="git.useCgitClone" checked="${scm.useCgitClone}"/>
+      </f:entry>
+    
   </f:advanced>
   
   <t:listScmBrowsers name="git.browser" />
