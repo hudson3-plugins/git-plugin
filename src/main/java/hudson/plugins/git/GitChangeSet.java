@@ -46,6 +46,7 @@ import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 
 import static hudson.Util.fixEmpty;
+import hudson.scm.SCM;
 
 /**
  * Represents a change set.
@@ -293,8 +294,11 @@ public class GitChangeSet extends ChangeLogSet.Entry {
         ChangeLogSet parent = getParent();
         boolean createAccountBaseOnCommitterEmail = false;
         if (parent != null) {
-            createAccountBaseOnCommitterEmail = ((GitSCM) parent.getBuild().getProject().getScm()).
-                isCreateAccountBaseOnCommitterEmail();
+            SCM scm = parent.getBuild().getProject().getScm();
+            if (scm instanceof GitSCM) {
+                createAccountBaseOnCommitterEmail = ((GitSCM) parent.getBuild().getProject().getScm()).
+                        isCreateAccountBaseOnCommitterEmail();
+            }
         }
         return createAccountBaseOnCommitterEmail;
     }
